@@ -1,4 +1,4 @@
-# FFSDB: Flat-File System Database
+# FFSDB: a Pure-python File System Database
 
 ![logo.png](logo.png)
 
@@ -21,10 +21,17 @@ Very heavily inspired by [SqliteDict](https://github.com/RaRe-Technologies/sqlit
 
 ```python
 
+from pathlib import Path
 from ffsdb import FFSdb
 
+
+# quickstart:
 db = FFSdb(tablename="test2")
-# creates directory ./ffsdb/test2
+# full example:
+db = FFSdb(tablename="test2", directory="ffsdata", reader=FFSdb.reader_json, writer=FFSdb.writer_json)
+
+
+# creates directory ./ffsdata/test2
 db['item1'] = {"hello":"there 1"}
 # writes a file ./ffsdb/test2/item1
 db[1] = {"hello":"there 2"}
@@ -56,6 +63,16 @@ for k,v in db.items():
 ```
 
 ## Custom read / write methods
+
+CSV pickling functions are included:
+
+
+```py
+db = FFSdb(tablename="test2", directory="ffsdata", reader=FFSdb.reader_csv, writer=FFSdb.writer_csv)
+```
+
+
+Implementation:
 
 ```py
 

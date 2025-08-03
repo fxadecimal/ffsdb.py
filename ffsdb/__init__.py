@@ -2,6 +2,10 @@ import csv
 import json
 from pathlib import Path
 from json import JSONEncoder
+import logging
+import re
+
+logger = logging.getLogger("ffsdb")
 
 
 def glob_files_in(directory, matches=["*"]):
@@ -32,7 +36,12 @@ def writer_csv(obj, path):
 
     with open(path, "w") as f:
         w = csv.DictWriter(
-            f, fieldnames=keys, delimiter="\t", quotechar='"', quoting=csv.QUOTE_ALL
+            f,
+            fieldnames=keys,
+            delimiter="\t",
+            quotechar='"',
+            quoting=csv.QUOTE_ALL,
+            lineterminator="\n",
         )
         w.writeheader()
         w.writerows(obj)
@@ -40,7 +49,18 @@ def writer_csv(obj, path):
 
 def reader_csv(path):
     with open(path) as f:
-        return list(csv.DictReader(f, delimiter="\t", quotechar='"'))
+        return list(
+            csv.DictReader(f, delimiter="\t", quotechar='"', quoting=csv.QUOTE_ALL)
+        )
+
+
+def slugify(string):
+    """
+    Convert a string to a slug suitable for use in filenames.
+    """
+    string = string.replace(" ", "_").replace("/", "_").replace("\\", "_")
+    string = re.sub(r"[^A-Za-z0-9_\-]", "", string)
+    return string
 
 
 class FFSdb(object):
@@ -54,11 +74,22 @@ class FFSdb(object):
 
     """
 
-    def __init__(self, directory, reader=reader_json, writer=writer_json):
-        self.path = Path(directory)
+    def __init__(
+        self, tablename, reader=reader_json, writer=writer_json, directory=None
+    ):
+
+        if directory is None:
+            directory = Path.cwd().joinpath("ffsdata")
+        else:
+            directory = Path(directory)
+
+        self.path = Path(directory).joinpath(tablename)
+        self.path.mkdir(parents=True, exist_ok=True)
+
+        logger.debug(f"FFSdb initialized at {self.path}")
+
         self.reader = reader
         self.writer = writer
-        self.path.mkdir(parents=True, exist_ok=True)
 
     def iter_files(self):
         for path in self.path.iterdir():
@@ -85,7 +116,7 @@ class FFSdb(object):
             yield v
 
     def get_key_path(self, key):
-        return self.path.joinpath(str(key))
+        return self.path.joinpath(slugify(str(key)))
 
     def __getitem__(self, key):
         return self.reader(self.get_key_path(key))
